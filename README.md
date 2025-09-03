@@ -7,7 +7,6 @@
 
 An interactive educational project that teaches modern AI development through hands-on biomedical applications. Build AI agents that answer complex questions about genes, proteins, diseases, and drugs using graph databases and multi-step AI workflows.
 
-**New to these concepts?** Start with the [Foundations Guide](docs/foundations-and-background.md) for complete background.
 
 ## What You'll Learn
 
@@ -77,7 +76,7 @@ pdm run app              # Start web interface
 
 ### Visual Debugging
 ```bash
-pdm run langgraph dev    # Start LangGraph Studio
+pdm run langgraph    # Start LangGraph Studio
 ```
 
 ### Development
@@ -101,9 +100,9 @@ pdm run lint            # Check quality
 - [Technical Guide](docs/technical-guide.md) - Architecture and development
 - [Practice Exercises](docs/exercises/practice-exercises.py) - Progressive challenges
 
-## Three Learning Approaches
+## Three Agent Types
 
-**WorkflowAgent** (main) - Educational LangGraph implementation with transparent processing  
+**WorkflowAgent** (main) - LangGraph implementation with transparent processing  
 **AdvancedWorkflowAgent** (reference) - Production patterns with advanced error handling  
 **TemplateQueryAgent** (reference) - Fast template-based queries without AI
 
@@ -111,7 +110,6 @@ pdm run lint            # Check quality
 
 - "What drugs treat hypertension?"
 - "What protein does gene TP53 encode?"
-- "Find complete pathways from BRCA1 to treatments"
 
 ---
 
