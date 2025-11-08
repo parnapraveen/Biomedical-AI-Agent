@@ -3,6 +3,7 @@ from src.agents.workflow_agent import WorkflowAgent
 from src.agents.graph_interface import GraphInterface
 import json
 import os
+import time
 from tqdm import tqdm
 
 class WorkflowEvaluator:
@@ -15,6 +16,7 @@ class WorkflowEvaluator:
     def evaluate(self) -> Dict[str, float]:
         classification_correct, entity_correct, answer_correct = 0, 0, 0
         total = len(self.dataset)
+        query_durations = []
 
         for example in tqdm(self.dataset, desc="Evaluating workflow"):
             state = {
@@ -26,8 +28,11 @@ class WorkflowEvaluator:
                 "final_answer": None
             }
 
-            # Run full workflow
+            # Run full workflow and measure duration
+            start_time = time.time()
             output = self.agent.workflow.invoke(state)
+            end_time = time.time()
+            query_durations.append(end_time - start_time)
 
             if output["question_type"] == example.get("expected_type"):
                 classification_correct += 1
@@ -62,19 +67,13 @@ class WorkflowEvaluator:
             if set(output_results_values) == set(example.get("expected_results", [])):
                 answer_correct += 1
 
-            print(f"Question: {example['question']}")
-            print(f"  Expected Entities: {example.get('expected_entities', [])}")
-            print(f"  Actual Entities: {output.get('entities', [])}")
-            print(f"  Expected Type: {example.get('expected_type')}")
-            print(f"  Actual Type: {output.get('question_type')}")
-            print(f"  Expected Results: {example.get('expected_results', [])}")
-            print(f"  Actual Results Values: {output_results_values}")
-            print("--------------------------------------------------")
+        avg_query_duration = sum(query_durations) / total if total > 0 else 0
 
         return {
             "classification_accuracy": classification_correct / total,
             "entity_accuracy": entity_correct / total,
-            "answer_accuracy": answer_correct / total
+            "answer_accuracy": answer_correct / total,
+            "average_query_duration_seconds": avg_query_duration
         }
 
 

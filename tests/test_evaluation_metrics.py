@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 import json
 from pathlib import Path
 import os
+import time
 
 from src.agents.evaluation_metrics import WorkflowEvaluator
 from src.agents.workflow_agent import WorkflowAgent
@@ -44,7 +45,8 @@ class TestWorkflowEvaluator(unittest.TestCase):
             self.dataset_path.unlink()
 
     @patch('src.agents.workflow_agent.Anthropic')
-    def test_evaluator_runs_and_calculates_metrics(self, MockAnthropic):
+    @patch('time.time')
+    def test_evaluator_runs_and_calculates_metrics(self, mock_time, MockAnthropic):
         mock_anthropic_instance = MockAnthropic.return_value
         mock_anthropic_instance.messages.create.side_effect = [
             # Response for classify_question for "What genes are associated with Hypertension?"
@@ -87,6 +89,9 @@ class TestWorkflowEvaluator(unittest.TestCase):
             MagicMock(data=[{"d.category": "oncology"}]),
         ]
 
+        # Mock time to simulate query durations
+        mock_time.side_effect = [1, 2, 3, 4, 5, 6] # 3 questions, each taking 1 second
+
         agent = WorkflowAgent(mock_graph_interface, "fake-api-key")
         evaluator = WorkflowEvaluator(agent, str(self.dataset_path))
         
@@ -95,9 +100,12 @@ class TestWorkflowEvaluator(unittest.TestCase):
         self.assertIn("classification_accuracy", metrics)
         self.assertIn("entity_accuracy", metrics)
         self.assertIn("answer_accuracy", metrics)
+        self.assertIn("average_query_duration_seconds", metrics)
+
         self.assertEqual(metrics["classification_accuracy"], 1.0)
         self.assertEqual(metrics["entity_accuracy"], 1.0)
         self.assertEqual(metrics["answer_accuracy"], 1.0)
+        self.assertEqual(metrics["average_query_duration_seconds"], 1.0) # (2-1) + (4-3) + (6-5) / 3 = 1.0
 
 if __name__ == '__main__':
     unittest.main()
