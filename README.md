@@ -1,8 +1,5 @@
-# DSC180A_Replication_Project - Parna Praveen
-## The features that I added is at the end of this README file. My feature is for evaluation metrics.
-
-# Life Sciences Knowledge Graph Agent
 # 🧬 Helix Navigator
+# Life Sciences Knowledge Graph Agent
 
 **Learn LangGraph and Knowledge Graphs through Biomedical AI**
 
@@ -101,9 +98,7 @@ pdm run lint            # Check quality
 - **"Which genes are linked to multiple disease categories?"**
 - **"What proteins have causal associations with diseases?"** 
 
-## Evaluation Module - I ADDED THIS PART
-
-### Note: This is starter code for adding evaluation metrics for each query. I have not made that much progress on this yet but the idea is to include node or system level evaluation metrics to help improve the system over time. 
+## Enhancements for Improved Accuracy (NEW)
 
 ### The system evaluates AI agent performance using four key metrics:
 
