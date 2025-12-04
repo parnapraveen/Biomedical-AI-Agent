@@ -1,0 +1,46 @@
+============================================================
+EVALUATION RESULTS
+============================================================
+
+Scenario 1: Baseline (No Enhancements)
+------------------------------------------------------------
+classification_accuracy: 0.75
+entity_accuracy: 0.12
+answer_accuracy: 0.12
+average_query_duration_seconds: 41.13
+
+Scenario 2: Conversation Memory ON
+------------------------------------------------------------
+classification_accuracy: 0.75
+entity_accuracy: 0.25
+answer_accuracy: 0.12
+average_query_duration_seconds: 45.17
+Improvement over baseline:
+  classification_accuracy: +0.00
+  entity_accuracy: +0.12
+  answer_accuracy: +0.00
+  average_query_duration_seconds: +4.03
+
+Scenario 3: Chain-of-Thought ON
+------------------------------------------------------------
+classification_accuracy: 0.75
+entity_accuracy: 0.38
+answer_accuracy: 0.25
+average_query_duration_seconds: 37.91
+Improvement over baseline:
+  classification_accuracy: +0.00
+  entity_accuracy: +0.25
+  answer_accuracy: +0.12
+  average_query_duration_seconds: -3.23
+
+Scenario 4: Memory + Chain-of-Thought
+------------------------------------------------------------
+classification_accuracy: 0.88
+entity_accuracy: 0.38
+answer_accuracy: 0.25
+average_query_duration_seconds: 38.65
+Improvement over baseline:
+  classification_accuracy: +0.12
+  entity_accuracy: +0.25
+  answer_accuracy: +0.12
+  average_query_duration_seconds: -2.49

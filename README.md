@@ -1,5 +1,5 @@
 # DSC180A_Replication_Project - Parna Praveen
-## The feature that I added is at the end of this README file. My feature is for evaluation metrics.
+## The features that I added is at the end of this README file. My feature is for evaluation metrics.
 
 # Life Sciences Knowledge Graph Agent
 # 🧬 Helix Navigator
@@ -123,6 +123,43 @@ Measures how well the agent's final generated answer matches the expected factua
 
 Measures the time taken to execute each query, providing insight into system efficiency and user experience. This metric is critical for evaluating real-world performance and scalability.
 
+### Conversation Memory Enhancement (NEW)
+
+This enhancement introduces session history tracking, allowing the agent to remember past turns in a conversation. By providing the LLM with context from previous questions and answers, the agent can better understand follow-up questions and generate more coherent and accurate responses in multi-turn interactions. This leads to improved performance on related questions within a single session.
+
+### Chain-of-Thought Reasoning Enhancement (NEW)
+
+This enhancement integrates chain-of-thought prompting into the agent's workflow. Instead of directly providing an answer, the LLM is prompted to "think step-by-step" through its reasoning process for tasks like question classification, entity extraction, query generation, and answer formatting. This approach aims to improve the quality and accuracy of the LLM's outputs by making its internal reasoning more explicit and structured.
+
+### Project Extensions and Modified Files (NEW)
+
+To implement the evaluation metrics, conversation memory, and chain-of-thought reasoning, the following new folders and files were added, and existing core files were modified:
+
+#### New Folders and Their Contents:
+
+*   `evaluation_metrics/`:
+    *   `evaluation_metrics.py`: The main script for running evaluations.
+    *   `golden_dataset.json`: The benchmark dataset used for evaluation.
+    *   `test_evaluation_metrics.py`: Unit tests for the evaluation module.
+*   `conversation_memory/`:
+    *   `memory_manager.py`: Contains the `MemoryManager` class for storing and formatting conversation history.
+*   `cot_prompts/`:
+    *   `classification_prompt.py`: Chain-of-Thought enhanced prompt for question classification.
+    *   `entity_extraction_prompt.py`: Chain-of-Thought enhanced prompt for entity extraction.
+    *   `query_generation_prompt.py`: Chain-of-Thought enhanced prompt for Cypher query generation.
+    *   `answer_formatting_general_knowledge_prompt.py`: Chain-of-Thought enhanced prompt for formatting general knowledge answers.
+    *   `answer_formatting_db_results_prompt.py`: Chain-of-Thought enhanced prompt for formatting database results.
+
+#### Main Modified Files:
+
+*   `src/agents/workflow_agent.py`: This core agent file was modified to:
+    *   Import `MemoryManager` and the CoT prompts.
+    *   Integrate a `conversation_memory` flag to enable/disable session history.
+    *   Integrate a `chain_of_thought` flag to enable/disable CoT prompts.
+    *   Update `__init__`, `_get_llm_response`, `answer_question`, `_build_classification_prompt`, `extract_entities`, `generate_query`, and `format_answer` to incorporate the new logic and conditional prompt usage.
+*   `evaluation_metrics/evaluation_metrics.py`: Modified to orchestrate the running of four distinct evaluation scenarios (Baseline, Memory Only, CoT Only, Both) and to clearly separate their results for comparison.
+*   `README.md` (this file): Updated to reflect the new features and evaluation instructions.
+
 ### Together, these metrics provide granular insights into where the agent may be failing:
 
 1. Low classification + high entity accuracy → LLM struggles with context selection but excels at term identification
@@ -131,18 +168,39 @@ Measures the time taken to execute each query, providing insight into system eff
 
 To evaluate the workflow agent:
 
+To run the comprehensive evaluation across different configurations, you can use the `evaluation_metrics.py` script. This script will run four distinct scenarios and output their performance metrics.
+
+### Running the Evaluation
+
 ```bash
-pdm run python src/agents/evaluation_metrics.py
+python -m evaluation_metrics.evaluation_metrics
 ```
 
-Expected output:
+This command will execute the evaluation for the following scenarios:
 
-```
-classification_accuracy: 0.64
-entity_accuracy: 0.64
-answer_accuracy: 0.36
-average_query_duration_seconds: 38.34
-```
+1.  **Scenario 1: No Enhancements (Baseline)**:
+    *   Conversation Memory: OFF
+    *   Chain-of-Thought: OFF
+    *   This represents the agent's performance without any of the added enhancements.
+
+2.  **Scenario 2: Conversation Memory ON Only**:
+    *   Conversation Memory: ON
+    *   Chain-of-Thought: OFF
+    *   This shows the impact of enabling conversation memory in isolation.
+
+3.  **Scenario 3: Chain-of-Thought ON Only**:
+    *   Conversation Memory: OFF
+    *   Chain-of-Thought: ON
+    *   This shows the impact of enabling chain-of-thought reasoning in isolation.
+
+4.  **Scenario 4: Conversation Memory ON & Chain-of-Thought ON**:
+    *   Conversation Memory: ON
+    *   Chain-of-Thought: ON
+    *   This demonstrates the combined impact of both enhancements.
+
+### Interpreting Results
+
+The results for each scenario will be printed to your terminal and also saved to the `evaluation_results` file in the project root. Each scenario's metrics will be clearly labeled. Look for improvements in `classification_accuracy`, `entity_accuracy`, and especially `answer_accuracy` when enhancements are active. A slight increase in `average_query_duration_seconds` is expected when more complex reasoning or context processing is involved.
 
 ## License
 

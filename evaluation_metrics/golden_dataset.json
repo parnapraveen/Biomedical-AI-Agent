@@ -1,79 +1,58 @@
 [
   {
+    "conversation_id": "conv_1",
     "question": "What genes are associated with Hypertension?",
     "expected_type": "gene_disease",
-    "expected_entities": ["Hypertension"],
-    "expected_query": "MATCH (g:Gene)-[:LINKED_TO]->(d:Disease {disease_name: 'Hypertension'}) RETURN g.gene_name",
+    "expected_entities": ["hypertension"],
     "expected_results": []
   },
   {
-    "question": "Which drugs treat Hypertension?",
+    "conversation_id": "conv_1", 
+    "question": "Which drugs treat it?",
     "expected_type": "drug_treatment",
-    "expected_entities": ["Hypertension"],
-    "expected_query": "MATCH (dr:Drug)-[:TREATS]->(d:Disease {disease_name: 'Hypertension'}) RETURN dr.drug_name",
+    "expected_entities": ["hypertension"],
     "expected_results": ["Lisinopril", "Enalapril", "Captopril"]
   },
   {
-    "question": "What is the category of Breast Cancer?",
-    "expected_type": "general_knowledge",
-    "expected_entities": ["Breast Cancer"],
-    "expected_query": "MATCH (d:Disease {disease_name: 'Breast_Cancer'}) RETURN d.category",
-    "expected_results": ["oncology"]
-  },
-  {
+    "conversation_id": "conv_2",
     "question": "Which approved drugs are small molecules?",
     "expected_type": "drug_treatment",
-    "expected_entities": ["approved", "small molecules"],
-    "expected_query": "MATCH (dr:Drug {approval_status: 'approved', type: 'small_molecule'}) RETURN dr.drug_name",
-    "expected_results": ["Lisinopril", "Enalapril", "Captopril", "Ramipril", "Irbesartan", "Olmesartan", "Metoprolol", "Nifedipine", "Diltiazem", "Hydrochlorothiazide", "Furosemide", "Atorvastatin", "Simvastatin", "Rosuvastatin", "Warfarin", "Dabigatran", "Doxorubicin", "Cisplatin", "Paclitaxel", "Carboplatin", "Imatinib", "Erlotinib", "Tamoxifen", "Phenytoin", "Valproate", "Sertraline", "Fluoxetine", "Escitalopram", "Venlafaxine", "Olanzapine", "Risperidone", "Quetiapine", "Lithium", "Valproate", "Lamotrigine", "Lorazepam", "Metformin", "Glipizide", "Pioglitazone", "Levothyroxine", "Methimazole", "Propylthiouracil", "Alendronate", "Risedronate", "Teriparatide", "Amoxicillin", "Azithromycin", "Vancomycin", "Acyclovir", "Sofosbuvir", "Remdesivir", "Itraconazole", "Amphotericin_B", "Chloroquine", "Artemisinin", "Mefloquine", "Salmeterol", "Tiotropium", "Formoterol", "Prednisone", "Beclomethasone", "Sulfasalazine", "Etanercept", "Cyclosporine", "Tacrolimus", "Mycophenolate"]
+    "expected_entities": ["approved", "small molecule"],
+    "expected_results": ["Lisinopril", "Enalapril", "Captopril", "Ramipril", "Irbesartan"]
   },
   {
-    "question": "What diseases are common and severe?",
+    "conversation_id": "conv_2",
+    "question": "Which of those treat cardiovascular diseases?",
+    "expected_type": "drug_treatment",
+    "expected_entities": ["cardiovascular", "approved", "small molecule"],
+    "expected_results": ["Lisinopril", "Enalapril", "Captopril"]
+  },
+  {
+    "conversation_id": "conv_3",
+    "question": "What is the category of Breast Cancer?",
     "expected_type": "general_knowledge",
-    "expected_entities": ["common", "severe"],
-    "expected_query": "MATCH (d:Disease {prevalence: 'common', severity: 'severe'}) RETURN d.disease_name",
-    "expected_results": ["Coronary_Artery_Disease", "Myocardial_Infarction", "Pericarditis", "Colorectal_Cancer", "Pneumonia", "Tuberculosis", "Cellulitis", "Renal_Failure", "Inflammatory_Bowel_Disease", "Irritable_Bowel_Syndrome", "Dementia", "Hearing_Loss", "Psoriasis", "Acne"]
-  },
-  {
-    "question": "Which proteins are associated with Coronary Artery Disease?",
-    "expected_type": "protein_function",
-    "expected_entities": ["Coronary Artery Disease"],
-    "expected_query": "MATCH (p:Protein)-[:ASSOCIATED_WITH]->(d:Disease {disease_name: 'Coronary_Artery_Disease'}) RETURN p.protein_name",
+    "expected_entities": ["breast cancer"],
     "expected_results": []
   },
   {
-    "question": "What is the mechanism of Lisinopril?",
-    "expected_type": "general_knowledge",
-    "expected_entities": ["Lisinopril"],
-    "expected_query": "MATCH (dr:Drug {drug_name: 'Lisinopril'}) RETURN dr.mechanism",
-    "expected_results": ["immunomodulator"]
-  },
-  {
-    "question": "Which genes encode proteins that target Lisinopril?",
-    "expected_type": "gene_disease",
-    "expected_entities": ["Lisinopril"],
-    "expected_query": "MATCH (g:Gene)-[:ENCODES]->(p:Protein)<-[:TARGETS]-(dr:Drug {drug_name: 'Lisinopril'}) RETURN g.gene_name",
+    "conversation_id": "conv_3",
+    "question": "Which drugs treat that disease?",
+    "expected_type": "drug_treatment",
+    "expected_entities": ["breast cancer"],
     "expected_results": []
   },
   {
-    "question": "What are the common diseases?",
-    "expected_type": "general_db",
-    "expected_entities": ["common"],
-    "expected_query": "MATCH (d:Disease {prevalence: 'common'}) RETURN d.disease_name",
-    "expected_results": ["Coronary_Artery_Disease", "Myocardial_Infarction", "Endocarditis", "Aortic_Aneurysm", "Deep_Vein_Thrombosis", "Pericarditis", "Colorectal_Cancer", "Lymphoma", "Melanoma", "Epilepsy", "Multiple_Sclerosis", "Migraine", "Dementia", "Traumatic_Brain_Injury", "Peripheral_Neuropathy", "Myasthenia_Gravis", "Depression", "Bipolar_Disorder", "OCD", "PTSD", "Panic_Disorder", "Eating_Disorders", "Substance_Abuse", "Social_Anxiety", "GAD", "Obesity", "Metabolic_Syndrome", "Hypothyroidism", "Hyperthyroidism", "Gout", "Osteoporosis", "Iron_Deficiency_Anemia", "Rheumatoid_Arthritis", "Lupus", "Psoriasis", "Inflammatory_Bowel_Disease", "Celiac_Disease", "Hashimoto_Thyroiditis", "Graves_Disease", "Vitiligo", "Alopeci-Areata", "Sjogren_Syndrome", "Scleroderma", "Dermatomyositis", "Vasculitis", "Ankylosing_Spondylitis", "Behcet_Disease", "Asthma", "Pneumonia", "Sleep_Apnea", "Bronchitis", "Emphysema", "Pleural_Effusion", "Pneumothorax", "Cystic_Fibrosis", "Pulmonary_Hypertension", "Sarcoidosis", "Tuberculosis", "Lung_Infection", "Respiratory_Failure", "COVID19", "Influenza", "Hepatitis_B", "Hepatitis_C", "HIV_AIDS", "Tuberculosis", "Malaria", "Pneumonia", "Sepsis", "UTI", "Skin_Infection", "Meningitis", "Endocarditis", "Osteomyelitis", "Gastroenteritis", "Sinusitis", "Pharyngitis", "Cellulitis", "Chronic_Kidney_Disease", "Acute_Kidney_Injury", "Kidney_Stones", "Polycystic_Kidney_Disease", "Glomerulonephritis", "Nephrotic_Syndrome", "Diabetic_Nephropathy", "Hypertensive_Nephropathy", "Renal_Failure", "GERD", "Peptic_Ulcer", "Inflammatory_Bowel_Disease", "Irritable_Bowel_Syndrome", "Liver_Cirrhosis", "Hepatitis", "Gallstones", "Pancreatitis", "Diverticulitis", "Gastroparesis", "Lactose_Intolerance", "Sickle_Cell_Disease", "Thalassemia", "Hemophilia", "Cystic_Fibrosis", "Huntington_Disease", "Duchenne_Muscular_Dystrophy", "Fragile_X_Syndrome", "Down_Syndrome", "Turner_Syndrome", "Marfan_Syndrome", "Neurofibromatosis", "Cerebral_Palsy", "Congenital_Heart_Disease", "Spin-Bifida", "Cleft_Palate", "Juvenile_Diabetes", "Childhood_Leukemia", "ADHD", "Autism", "Developmental_Delays", "Failure_to_Thrive", "Dementia", "Osteoarthritis", "Osteoporosis", "Macular_Degeneration", "Hearing_Loss", "Falls", "Frailty", "Polypharmacy", "Delirium", "Glaucoma", "Macular_Degeneration", "Diabetic_Retinopathy", "Cataracts", "Dry_Eye_Syndrome", "Retinal_Detachment", "Eczema", "Psoriasis", "Acne", "Melanoma", "Basal_Cell_Carcinoma", "Rosacea", "Vitiligo", "Alopecia"]
+    "conversation_id": "conv_4",
+    "question": "Which drugs treat Hypertension?",
+    "expected_type": "drug_treatment",
+    "expected_entities": ["hypertension"],
+    "expected_results": ["Lisinopril", "Enalapril", "Captopril"]
   },
   {
-    "question": "What is the molecular weight of proteins encoded by genes linked to Hypertension?",
-    "expected_type": "protein_function",
-    "expected_entities": ["Hypertension"],
-    "expected_query": "MATCH (g:Gene)-[:LINKED_TO]->(d:Disease {disease_name: 'Hypertension'})-[:ASSOCIATED_WITH]->(p:Protein) RETURN p.molecular_weight",
-    "expected_results": []
-  },
-  {
-    "question": "List drugs with 'approved' status.",
-    "expected_type": "general_db",
-    "expected_entities": ["approved"],
-    "expected_query": "MATCH (dr:Drug {approval_status: 'approved'}) RETURN dr.drug_name",
-    "expected_results": ["Lisinopril", "Enalapril", "Captopril", "Ramipril", "Irbesartan", "Olmesartan", "Metoprolol", "Nifedipine", "Diltiazem", "Hydrochlorothiazide", "Furosemide", "Atorvastatin", "Simvastatin", "Rosuvastatin", "Warfarin", "Dabigatran", "Doxorubicin", "Cisplatin", "Paclitaxel", "Carboplatin", "Trastuzumab", "Imatinib", "Erlotinib", "Bevacizumab", "Pembrolizumab", "Nivolumab", "Ipilimumab", "Atezolizumab", "Tamoxifen", "Phenytoin", "Valproate", "Levetiracetam", "Pramipexole", "Ropinirole", "Donepezil", "Rivastigmine", "Galantamine", "Memantine", "Interferon_Beta", "Glatiramer", "Sertraline", "Fluoxetine", "Escitalopram", "Venlafaxine", "Olanzapine", "Risperidone", "Quetiapine", "Lithium", "Valproate", "Lamotrigine", "Carbamazepine", "Lorazepam", "Metformin", "Insulin", "Glipizide", "Pioglitazone", "Levothyroxine", "Methimazole", "Propylthiouracil", "Alendronate", "Risedronate", "Denosumab", "Teriparatide", "Amoxicillin", "Azithromycin", "Ciprofloxacin", "Vancomycin", "Oseltamivir", "Acyclovir", "Sofosbuvir", "Remdesivir", "Fluconazole", "Itraconazole", "Amphotericin_B", "Chloroquine", "Artemisinin", "Mefloquine", "Albuterol", "Salmeterol", "Tiotropium", "Formoterol", "Fluticasone", "Budesonide", "Prednisone", "Beclomethasone", "Methotrexate", "Sulfasalazine", "Hydroxychloroquine", "Adalimumab", "Etanercept", "Infliximab", "Rituximab", "Cyclosporine", "Tacrolimus", "Mycophenolate"]
+    "conversation_id": "conv_4",
+    "question": "Are they approved?",
+    "expected_type": "drug_treatment",
+    "expected_entities": ["approved", "hypertension"],
+    "expected_results": ["Lisinopril", "Enalapril", "Captopril"]
   }
 ]

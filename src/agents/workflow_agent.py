@@ -1,11 +1,10 @@
 """
-LangGraph workflow agent for biomedical knowledge graphs.
-
-5-step workflow: Classify → Extract → Generate → Execute → Format
+LangGraph workflow agent for biomedical knowledge graphs with enhancements.
 """
 
 import json
 import os
+import re
 from typing import Any, Dict, List, Optional, TypedDict
 
 from anthropic import Anthropic
@@ -13,11 +12,13 @@ from dotenv import load_dotenv
 from langgraph.graph import END, StateGraph
 
 from .graph_interface import GraphInterface
+from conversation_memory.memory_manager import MemoryManager
+from cot_prompts.classification_prompt import CLASSIFICATION_PROMPT
+from cot_prompts.entity_extraction_prompt import ENTITY_EXTRACTION_PROMPT
 
 
 class WorkflowState(TypedDict):
     """State that flows through the workflow steps."""
-
     user_question: str
     question_type: Optional[str]
     entities: Optional[List[str]]
@@ -30,81 +31,51 @@ class WorkflowState(TypedDict):
 class WorkflowAgent:
     """LangGraph workflow agent for biomedical knowledge graphs."""
 
-    # Class constants
     MODEL_NAME = "claude-sonnet-4-20250514"
     DEFAULT_MAX_TOKENS = 200
-
-    # Default schema query
     SCHEMA_QUERY = (
         "MATCH (n) RETURN labels(n) as node_type, count(n) as count "
         "ORDER BY count DESC LIMIT 10"
     )
 
-    def __init__(self, graph_interface: GraphInterface, anthropic_api_key: str):
+    def __init__(self, graph_interface: GraphInterface, anthropic_api_key: str, 
+                 conversation_memory: bool = False, chain_of_thought: bool = False):
         self.graph_db = graph_interface
         self.anthropic = Anthropic(api_key=anthropic_api_key)
         self.schema = self.graph_db.get_schema_info()
         self.property_values = self._get_key_property_values()
         self.workflow = self._create_workflow()
+        
+        # Enhancement flags
+        self.conversation_memory_enabled = conversation_memory
+        self.chain_of_thought = chain_of_thought
+        
+        if self.conversation_memory_enabled:
+            self.memory_manager = MemoryManager()
 
     def _get_key_property_values(self) -> Dict[str, List[Any]]:
-        """Get property values dynamically from all nodes and relationships.
-
-        This method discovers all available properties in the database schema and
-        collects sample values for each property. This enables the LLM to generate
-        more accurate queries by knowing what property values actually exist.
-
-        Returns:
-            Dict mapping property names to lists of sample values from the database
-        """
+        """Get property values dynamically from all nodes and relationships."""
         values = {}
         try:
-            # Discover and collect property values from all node types in the database
-            # This replaces hardcoded property lists with dynamic schema discovery
             for node_label in self.schema.get("node_labels", []):
-                # Get all properties that exist for this node type
                 node_props = self.schema.get("node_properties", {}).get(node_label, [])
                 for prop_name in node_props:
-                    # Avoid duplicate property names (same property might exist
-                    # on multiple node types)
                     if prop_name not in values:
-                        # Query the database for actual property values
-                        # (limited to 20 for performance)
-                        prop_values = self.graph_db.get_property_values(
-                            node_label, prop_name
-                        )
-                        # Only store properties that have actual values in the database
+                        prop_values = self.graph_db.get_property_values(node_label, prop_name)
                         if prop_values:
                             values[prop_name] = prop_values
 
-            # Discover and collect property values from all relationship types
-            # This ensures we capture relationship-specific properties like
-            # confidence, weight, etc.
             for rel_type in self.schema.get("relationship_types", []):
-                # GraphInterface expects 'REL_' prefix for relationship queries
                 rel_label = f"REL_{rel_type}"
-                # Get all properties that exist for this relationship type
-                rel_props = self.schema.get("relationship_properties", {}).get(
-                    rel_type, []
-                )
+                rel_props = self.schema.get("relationship_properties", {}).get(rel_type, [])
                 for prop_name in rel_props:
-                    # Skip if we already have this property from a node type
                     if prop_name not in values:
                         try:
-                            # Query relationship properties using the REL_ prefix
-                            # convention
-                            prop_values = self.graph_db.get_property_values(
-                                rel_label, prop_name
-                            )
-                            # Only store if the relationship actually has values
-                            # for this property
+                            prop_values = self.graph_db.get_property_values(rel_label, prop_name)
                             if prop_values:
                                 values[prop_name] = prop_values
                         except Exception:
-                            # Some relationships might not have certain properties -
-                            # skip gracefully
                             continue
-
         except Exception:
             pass
         return values
@@ -119,6 +90,7 @@ class WorkflowAgent:
                 model=self.MODEL_NAME,
                 max_tokens=max_tokens,
                 messages=[{"role": "user", "content": prompt}],
+                temperature=0,  # Deterministic for evaluation
             )
             content = response.content[0]
             return content.text.strip() if hasattr(content, "text") else str(content)
@@ -128,27 +100,36 @@ class WorkflowAgent:
     def _create_workflow(self) -> Any:
         """Create the LangGraph workflow."""
         workflow = StateGraph(WorkflowState)
-
         workflow.add_node("classify", self.classify_question)
         workflow.add_node("extract", self.extract_entities)
         workflow.add_node("generate", self.generate_query)
         workflow.add_node("execute", self.execute_query)
         workflow.add_node("format", self.format_answer)
-
         workflow.add_edge("classify", "extract")
         workflow.add_edge("extract", "generate")
         workflow.add_edge("generate", "execute")
         workflow.add_edge("execute", "format")
         workflow.add_edge("format", END)
-
         workflow.set_entry_point("classify")
         return workflow.compile()
 
     def _build_classification_prompt(self, question: str) -> str:
-        """Build classification prompt with consistent formatting."""
-        return f"""Classify this biomedical question. Choose one:
+        """Build classification prompt."""
+        conversation_history = ""
+        if self.conversation_memory_enabled and hasattr(self, 'memory_manager'):
+            history = self.memory_manager.get_history()
+            if history:
+                conversation_history = "Previous conversation:\n" + self.memory_manager.format_history_for_prompt() + "\n\n"
+        
+        if self.chain_of_thought:
+            return CLASSIFICATION_PROMPT.format(
+                question=question,
+                conversation_history=conversation_history
+            )
+        else:
+            return f"""{conversation_history}Classify this biomedical question. Choose one:
 - gene_disease: genes and diseases
-- drug_treatment: drugs and treatments
+- drug_treatment: drugs and treatments  
 - protein_function: proteins and functions
 - general_db: database exploration
 - general_knowledge: biomedical concepts
@@ -158,140 +139,111 @@ Question: {question}
 Respond with just the type."""
 
     def classify_question(self, state: WorkflowState) -> WorkflowState:
-        """Classify the biomedical question type using an LLM.
-
-        Uses LLM-based classification instead of hardcoded keyword matching for
-        more flexible and accurate question type detection. This enables the agent
-        to handle nuanced questions that don't fit simple keyword patterns.
-        """
+        """Classify the biomedical question type."""
         try:
-            # Build classification prompt with available question types
             prompt = self._build_classification_prompt(state["user_question"])
-            # Use minimal tokens since we only need a single classification word
-            state["question_type"] = self._get_llm_response(prompt, max_tokens=20)
+            response = self._get_llm_response(prompt, max_tokens=50)
+            
+            # Clean response
+            response = response.strip().lower().rstrip(".,;:!?")
+            
+            # Validate
+            valid_types = ["gene_disease", "drug_treatment", "protein_function", "general_db", "general_knowledge"]
+            if response in valid_types:
+                state["question_type"] = response
+            else:
+                # Try to find valid type in response
+                for vtype in valid_types:
+                    if vtype in response:
+                        state["question_type"] = vtype
+                        break
+                else:
+                    state["question_type"] = "general_knowledge"
+                    
         except Exception as e:
-            # If classification fails, record error but continue with safe fallback
             state["error"] = f"Classification failed: {str(e)}"
-            # Default to general knowledge to avoid database queries with
-            # malformed inputs
             state["question_type"] = "general_knowledge"
         return state
 
     def extract_entities(self, state: WorkflowState) -> WorkflowState:
-        """Extract biomedical entities from the question.
-
-        Uses the database schema to guide entity extraction, ensuring that
-        only entities that can actually be found in the database are
-        extracted.
-        This improves query generation accuracy by providing relevant context.
-        """
-        # Skip entity extraction for questions that don't need
-        # database-specific entities
+        """Extract biomedical entities from the question."""
         question_type = state.get("question_type")
         if question_type in ["general_db", "general_knowledge"]:
-            # General questions don't need specific entity extraction
             state["entities"] = []
             return state
 
-        # Build dynamic property information from actual database content
-        # This replaces hardcoded examples with real data from the database
         property_info = []
         for prop_name, values in self.property_values.items():
-            if values:  # Only show properties with actual values in database
-                # Show first 3 values as representative examples for the LLM
+            if values:
                 sample_values = ", ".join(str(v) for v in values[:3])
                 property_info.append(f"- {prop_name}: {sample_values}")
 
         entity_types_str = ", ".join(self.schema.get("node_labels", []))
-        relationship_types_str = ", ".join(self.schema.get("relationship_types", []))
+        
+        conversation_history = ""
+        if self.conversation_memory_enabled and hasattr(self, 'memory_manager'):
+            history = self.memory_manager.get_history()
+            if history:
+                conversation_history = "Previous conversation:\n" + self.memory_manager.format_history_for_prompt() + "\n\n"
 
-        prompt = (
-            f"""You are an expert in biomedical knowledge graphs. Extract specific, concrete biomedical entities and property values directly mentioned in the user's question.
+        if self.chain_of_thought:
+            prompt = ENTITY_EXTRACTION_PROMPT.format(
+                question=state["user_question"],
+                entity_types_str=entity_types_str,
+                property_info='\n'.join(property_info),
+                conversation_history=conversation_history
+            )
+        else:
+            prompt = f"""{conversation_history}Extract specific biomedical entities from this question.
 
-Only extract terms that would serve as direct values or filters in a database query.
-
-Examples of terms to extract:
-- Specific names of entities (e.g., "Hypertension", "Lisinopril", "Breast Cancer", "TP53")
-- Explicit property values (e.g., "approved", "common", "severe", "small molecule", "oncology", "cardiovascular")
-
-Do NOT extract:
-- General entity types (e.g., "Gene", "Disease", "Drug", "Protein")
-- Relationship concepts (e.g., "treats", "associated with", "targets", "encodes", "linked to")
-- Property names (e.g., "category", "mechanism", "molecular weight", "approval status", "type")
-- Question words or phrases that don't refer to specific data points (e.g., "what", "which", "list", "how many")
+Available entity types: {entity_types_str}
+Available property values:
+{chr(10).join(property_info) if property_info else "- No property values available"}
 
 Question: {state['user_question']}
 
-Return a JSON list of strings. If no relevant entities or property values are found, return an empty list.
-
-Example:
-User Question: "Which approved drugs treat cardiovascular diseases?"
-Extracted Entities: ["approved", "cardiovascular diseases"]
-
-Example:
-User Question: "What genes are linked to breast cancer?"
-Extracted Entities: ["breast cancer"]
-
-Example:
-User Question: "What diseases are common and severe?"
-Extracted Entities: ["common", "severe"]
-
-Respond with just the JSON list of extracted entities."""
-        )
+Extract specific names and property values. Return JSON list: ["term1", "term2"] or []"""
 
         try:
-            response_text = self._get_llm_response(prompt, max_tokens=100)
-
-            # Clean up response text before JSON parsing
-            cleaned_text = response_text.strip()
-            if cleaned_text.startswith("```json"):
-                cleaned_text = (
-                    cleaned_text.replace("```json", "").replace("```", "").strip()
-                )
-
-            state["entities"] = json.loads(cleaned_text)
+            response = self._get_llm_response(prompt, max_tokens=100)
+            
+            # Extract JSON from response
+            response = response.strip()
+            response = response.replace('```json', '').replace('```', '').strip()
+            
+            # Find JSON array
+            match = re.search(r'\[.*?\]', response, re.DOTALL)
+            if match:
+                json_str = match.group(0)
+                state["entities"] = json.loads(json_str)
+            else:
+                state["entities"] = []
+                
         except (json.JSONDecodeError, AttributeError):
-            # Fallback to empty list if JSON parsing fails
             state["entities"] = []
 
         return state
 
     def generate_query(self, state: WorkflowState) -> WorkflowState:
-        """Generate Cypher query based on question type.
-
-        Creates database queries dynamically using the actual schema and property
-        values discovered from the database. This ensures queries are valid and
-        use only properties/relationships that actually exist.
-        """
+        """Generate Cypher query based on question type."""
         question_type = state.get("question_type", "general")
 
-        # Database exploration questions use a simple schema overview query
         if question_type == "general_db":
-            # Use predefined query to show database structure and content overview
             state["cypher_query"] = self.SCHEMA_QUERY
             return state
 
-        # General knowledge questions don't need database queries
         if question_type == "general_knowledge":
-            # Skip database query for conceptual questions that don't need data lookup
             state["cypher_query"] = None
             return state
 
-        # Build dynamic relationship guide from actual database schema
-        # This replaces hardcoded relationship patterns with discovered relationships
         relationship_guide = f"""
 Available relationships:
 {' | '.join([f'- {rel}' for rel in self.schema['relationship_types']])}"""
 
-        # Build comprehensive property information from database discovery
-        # This gives the LLM concrete examples of what property values exist
         property_details = []
         for prop_name, values in self.property_values.items():
-            if values:  # Only include properties with actual values in the database
-                # Auto-detect value type to help LLM understand data format
-                value_type = (
-                    "text values" if isinstance(values[0], str) else "numeric values"
-                )
+            if values:
+                value_type = "text values" if isinstance(values[0], str) else "numeric values"
                 property_details.append(f"- {prop_name}: {values} ({value_type})")
 
         property_info = f"""Property names and values:
@@ -299,6 +251,7 @@ Node properties: {self.schema['node_properties']}
 Available property values:
 {chr(10).join(property_details) if property_details else "- No values available"}
 Use WHERE property IN [value1, value2] for filtering."""
+
         prompt = f"""Create a Cypher query for this biomedical question:
 
 Question: {state['user_question']}
@@ -316,13 +269,9 @@ Return only the Cypher query."""
 
         cypher_query = self._get_llm_response(prompt, max_tokens=150)
 
-        # Clean up LLM response formatting (remove markdown code blocks)
-        # LLMs often wrap code in ```cypher blocks, so we need to extract just the query
         if cypher_query.startswith("```"):
             cypher_query = "\n".join(
-                line
-                for line in cypher_query.split("\n")
-                # Remove markdown code block markers and language specifiers
+                line for line in cypher_query.split("\n")
                 if not line.startswith("```") and not line.startswith("cypher")
             ).strip()
 
@@ -330,64 +279,42 @@ Return only the Cypher query."""
         return state
 
     def execute_query(self, state: WorkflowState) -> WorkflowState:
-        """Execute the generated Cypher query against the database.
-
-        Safely executes the LLM-generated query with error handling to prevent
-        crashes from malformed queries while capturing useful error information.
-        """
+        """Execute the generated Cypher query."""
         try:
             query = state.get("cypher_query")
-            # Execute query only if one was generated (some question types
-            # skip this step)
             state["results"] = self.graph_db.execute_query(query) if query else []
         except Exception as e:
-            # Capture query execution errors but continue workflow to provide
-            # helpful feedback
             state["error"] = f"Query failed: {str(e)}"
-            # Set empty results so the format step can handle the error gracefully
             state["results"] = []
-
         return state
 
     def format_answer(self, state: WorkflowState) -> WorkflowState:
-        """Format database results into human-readable answer.
-
-        Takes raw database results and converts them into natural language
-        responses, handling different question types and error conditions.
-        """
-        # Handle any errors that occurred during the workflow
+        """Format database results into human-readable answer."""
         if state.get("error"):
-            state["final_answer"] = (
-                f"Sorry, I had trouble with that question: {state['error']}"
-            )
+            state["final_answer"] = f"Sorry, I had trouble with that question: {state['error']}"
             return state
 
         question_type = state.get("question_type")
 
-        # General knowledge questions use LLM knowledge instead of database results
         if question_type == "general_knowledge":
-            # Generate answer from LLM's training knowledge rather than database lookup
             state["final_answer"] = self._get_llm_response(
                 f"""Answer this general biomedical question using your knowledge:
 
 Question: {state['user_question']}
 
 Provide a clear, informative answer about biomedical concepts.""",
-                max_tokens=300,  # Allow more tokens for explanatory content
+                max_tokens=300,
             )
             return state
 
-        # Handle database-based answers using query results
         results = state.get("results", [])
         if not results:
-            # No results found - provide helpful guidance for next steps
             state["final_answer"] = (
                 "I didn't find any information for that question. Try asking about "
                 "genes, diseases, or drugs in our database."
             )
             return state
 
-        # Convert raw database results into natural language using LLM
         state["final_answer"] = self._get_llm_response(
             f"""Convert these database results into a clear answer:
 
@@ -396,14 +323,12 @@ Results: {json.dumps(results[:5], indent=2)}
 Total found: {len(results)}
 
 Make it concise and informative.""",
-            max_tokens=250,  # Balanced token limit for informative but concise
-            # responses
+            max_tokens=250,
         )
         return state
 
     def answer_question(self, question: str) -> Dict[str, Any]:
         """Answer a biomedical question using the LangGraph workflow."""
-
         initial_state = WorkflowState(
             user_question=question,
             question_type=None,
@@ -415,9 +340,15 @@ Make it concise and informative.""",
         )
 
         final_state = self.workflow.invoke(initial_state)
+        
+        final_answer = final_state.get("final_answer", "No answer generated")
+        
+        # Add to conversation memory if enabled
+        if self.conversation_memory_enabled and hasattr(self, 'memory_manager'):
+            self.memory_manager.add_turn(question, final_answer)
 
         return {
-            "answer": final_state.get("final_answer", "No answer generated"),
+            "answer": final_answer,
             "question_type": final_state.get("question_type"),
             "entities": final_state.get("entities", []),
             "cypher_query": final_state.get("cypher_query"),
@@ -440,6 +371,8 @@ def create_workflow_graph() -> Any:
     agent = WorkflowAgent(
         graph_interface=graph_interface,
         anthropic_api_key=os.getenv("ANTHROPIC_API_KEY", ""),
+        conversation_memory=os.getenv("CONVERSATION_MEMORY", "false").lower() == "true",
+        chain_of_thought=os.getenv("CHAIN_OF_THOUGHT", "false").lower() == "true",
     )
 
     return agent.workflow

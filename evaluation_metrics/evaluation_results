@@ -1,4 +1,0 @@
-classification_accuracy: 0.55
-entity_accuracy: 0.73
-answer_accuracy: 0.36
-average_query_duration_seconds: 35.60
