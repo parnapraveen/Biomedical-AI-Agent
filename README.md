@@ -127,6 +127,8 @@ Measures the time taken to execute each query, providing insight into system eff
 
 This enhancement introduces session history tracking, allowing the agent to remember past turns in a conversation. By providing the LLM with context from previous questions and answers, the agent can better understand follow-up questions and generate more coherent and accurate responses in multi-turn interactions. This leads to improved performance on related questions within a single session.
 
+The benchmark dataset in `evaluation_metrics/golden_dataset.json` now contains linked multi-turn conversations (e.g., “What genes are associated with Hypertension?” followed by “Which drugs treat it?”). These scenarios ensure that the Conversation Memory flag has measurable impact during evaluation.
+
 ### Chain-of-Thought Reasoning Enhancement (NEW)
 
 This enhancement integrates chain-of-thought prompting into the agent's workflow. Instead of directly providing an answer, the LLM is prompted to "think step-by-step" through its reasoning process for tasks like question classification, entity extraction, query generation, and answer formatting. This approach aims to improve the quality and accuracy of the LLM's outputs by making its internal reasoning more explicit and structured.
@@ -200,7 +202,23 @@ This command will execute the evaluation for the following scenarios:
 
 ### Interpreting Results
 
-The results for each scenario will be printed to your terminal and also saved to the `evaluation_results` file in the project root. Each scenario's metrics will be clearly labeled. Look for improvements in `classification_accuracy`, `entity_accuracy`, and especially `answer_accuracy` when enhancements are active. A slight increase in `average_query_duration_seconds` is expected when more complex reasoning or context processing is involved.
+The results for each scenario will be printed to your terminal and also saved to `evaluation_metrics/evaluation_results.txt`. Each scenario's metrics are clearly labeled and include deltas relative to the baseline. Look for improvements in `classification_accuracy`, `entity_accuracy`, and `answer_accuracy` when enhancements are active. A slight increase in `average_query_duration_seconds` is expected when more complex reasoning or context processing is involved.
+
+### Latest Evaluation Snapshot
+
+Results from the most recent run (`evaluation_metrics/evaluation_results.txt`):
+
+```5:46:evaluation_metrics/evaluation_results.txt
+Scenario 1 (Baseline): classification 0.75, entity 0.12, answer 0.12
+Scenario 2 (Memory): classification 0.75, entity 0.25, answer 0.12
+Scenario 3 (CoT): classification 0.75, entity 0.38, answer 0.25
+Scenario 4 (Memory + CoT): classification 0.88, entity 0.38, answer 0.25
+```
+
+Key takeaways:
+- Memory alone improves entity recall on follow-up questions that depend on prior turns.
+- Chain-of-thought significantly boosts both entity and answer accuracy by forcing step-by-step reasoning.
+- Combining Memory + CoT yields the best classification accuracy (0.88) while maintaining the answer-quality gains.
 
 ## License
 
