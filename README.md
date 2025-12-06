@@ -11,20 +11,10 @@ This repository contains a Python-based framework for building AI agents that in
 
 The primary goal of this project is to demonstrate how structured knowledge graphs can enhance LLM capabilities, providing accurate, verifiable answers to domain-specific questions while avoiding hallucinations. The framework includes enhancements for conversation memory and chain-of-thought reasoning to improve accuracy and enable multi-turn conversations.
 
-## Folder Structure
+## Folder Structure (Look for files)
 
 ```
 DSC180A_Replication_Project/
-│
-├── conversation_memory/          <- NEW: Conversation memory enhancement module
-│   └── memory_manager.py        <- MemoryManager class for storing conversation history
-│
-├── cot_prompts/                 <- NEW: Chain-of-thought reasoning prompts
-│   ├── classification_prompt.py
-│   ├── entity_extraction_prompt.py
-│   ├── query_generation_prompt.py
-│   ├── answer_formatting_general_knowledge_prompt.py
-│   └── answer_formatting_db_results_prompt.py
 │
 ├── data/                        <- Biomedical datasets (CSV files)
 │   ├── diseases.csv
@@ -57,8 +47,18 @@ DSC180A_Replication_Project/
 │
 ├── src/                         <- Main source code
 │   ├── agents/
-│   │   ├── graph_interface.py   <- MODIFIED: Neo4j database interface
+│   │   ├── graph_interface.py   <- Neo4j database interface
 │   │   └── workflow_agent.py    <- MODIFIED: Core LangGraph agent with enhancements
+│   ├── memory/                  <- NEW: Conversation memory enhancement module
+│   │   ├── __init__.py
+│   │   └── memory_manager.py   <- MemoryManager class for storing conversation history
+│   ├── prompts/                 <- NEW: Chain-of-thought reasoning prompts
+│   │   ├── __init__.py
+│   │   ├── classification_prompt.py
+│   │   ├── entity_extraction_prompt.py
+│   │   ├── query_generation_prompt.py
+│   │   ├── answer_formatting_general_knowledge_prompt.py
+│   │   └── answer_formatting_db_results_prompt.py
 │   └── web/
 │       └── app.py               <- Interactive Streamlit interface
 │
@@ -142,7 +142,7 @@ This project uses PDM for dependency management. Key dependencies include:
 1. **Clone the repository**:
    ```bash
    git clone <repository-url>
-   cd DSC180A_Replication_Project
+   cd Biomedical-AI-Agent
    ```
 
 2. **Install dependencies**:
@@ -246,6 +246,10 @@ Measures how well the agent's final generated answer matches the expected factua
 ### Average Query Duration
 Measures the time taken to execute each query, providing insight into system efficiency and user experience.
 
+![Performance Comparison](figure/performance_comparison.pdf)
+
+*Figure 2: Performance comparison across four evaluation scenarios showing classification, entity, and answer accuracy metrics.*
+
 ### Latest Evaluation Results
 
 Results from the most recent evaluation run:
@@ -294,16 +298,18 @@ The agent can answer questions such as:
 
 The following enhancements were added to the original project:
 
-**`evaluation_metrics/`**:
+**`evaluation_metrics/`** (at root level):
 - `evaluation_metrics.py`: Main evaluation script that runs all four scenarios
 - `golden_dataset.json`: Benchmark dataset with multi-turn conversations
 - `evaluation_results.txt`: Output file with detailed metrics
 - `test_evaluation_metrics.py`: Unit tests for the evaluation module
 
-**`conversation_memory/`**:
+**`src/memory/`** (NEW - moved from root):
+- `__init__.py`: Module initialization
 - `memory_manager.py`: `MemoryManager` class for storing and formatting conversation history
 
-**`cot_prompts/`**:
+**`src/prompts/`** (NEW - moved from root):
+- `__init__.py`: Module initialization
 - `classification_prompt.py`: CoT-enhanced prompt for question classification
 - `entity_extraction_prompt.py`: CoT-enhanced prompt for entity extraction
 - `query_generation_prompt.py`: CoT-enhanced prompt for Cypher query generation

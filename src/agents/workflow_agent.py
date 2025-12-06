@@ -12,9 +12,8 @@ from dotenv import load_dotenv
 from langgraph.graph import END, StateGraph
 
 from .graph_interface import GraphInterface
-from conversation_memory.memory_manager import MemoryManager
-from cot_prompts.classification_prompt import CLASSIFICATION_PROMPT
-from cot_prompts.entity_extraction_prompt import ENTITY_EXTRACTION_PROMPT
+from ..memory import MemoryManager
+from ..prompts import CLASSIFICATION_PROMPT, ENTITY_EXTRACTION_PROMPT
 
 
 class WorkflowState(TypedDict):
